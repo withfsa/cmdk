@@ -31,6 +31,8 @@ type DialogProps = RadixDialog.DialogProps &
     overlayClassName?: string
     /** Provide a className to the Dialog content. */
     contentClassName?: string
+    /** Provide a title to the Dialog.Title compoment (this will be hidden). */
+    title?: string
     /** Provide a custom element the Dialog should portal into. */
     container?: HTMLElement
   }
@@ -668,6 +670,7 @@ const Item = React.forwardRef<HTMLDivElement, ItemProps>((props, forwardedRef) =
   const context = useCommand()
   const propsRef = useAsRef(props)
   const forceMount = propsRef.current?.forceMount ?? groupContext?.forceMount
+  const [isVisuallyHighlighted, setIsVisuallyHighlighted] = React.useState(false)
 
   useLayoutEffect(() => {
     if (!forceMount) {
@@ -699,6 +702,15 @@ const Item = React.forwardRef<HTMLDivElement, ItemProps>((props, forwardedRef) =
     store.setState('value', value.current, true)
   }
 
+  function handlePointerEnter() {
+    if (props.disabled || context.getDisablePointerSelection()) return
+    setIsVisuallyHighlighted(true)
+  }
+
+  function handlePointerLeave() {
+    setIsVisuallyHighlighted(false)
+  }
+
   if (!render) return null
 
   const { disabled, value: _, onSelect: __, forceMount: ___, keywords: ____, ...etc } = props
@@ -711,10 +723,11 @@ const Item = React.forwardRef<HTMLDivElement, ItemProps>((props, forwardedRef) =
       cmdk-item=""
       role="option"
       aria-disabled={Boolean(disabled)}
-      aria-selected={Boolean(selected)}
+      aria-selected={Boolean(selected || isVisuallyHighlighted)}
       data-disabled={Boolean(disabled)}
-      data-selected={Boolean(selected)}
-      onPointerMove={disabled || context.getDisablePointerSelection() ? undefined : select}
+      data-selected={Boolean(selected || isVisuallyHighlighted)}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
       onClick={disabled ? undefined : onSelect}
     >
       {props.children}
@@ -880,12 +893,21 @@ const List = React.forwardRef<HTMLDivElement, ListProps>((props, forwardedRef) =
  * Renders the command menu in a Radix Dialog.
  */
 const Dialog = React.forwardRef<HTMLDivElement, DialogProps>((props, forwardedRef) => {
-  const { open, onOpenChange, overlayClassName, contentClassName, container, ...etc } = props
+  const {
+    open,
+    onOpenChange,
+    overlayClassName,
+    contentClassName,
+    container,
+    title = 'Command Menu Dialog',
+    ...etc
+  } = props
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal container={container}>
         <RadixDialog.Overlay cmdk-overlay="" className={overlayClassName} />
         <RadixDialog.Content aria-label={props.label} cmdk-dialog="" className={contentClassName}>
+          <RadixDialog.Title style={srOnlyStyles}>{title}</RadixDialog.Title>
           <Command ref={forwardedRef} {...etc} />
         </RadixDialog.Content>
       </RadixDialog.Portal>
