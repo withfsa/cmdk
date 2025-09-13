@@ -67,6 +67,8 @@ type GroupProps = Children &
     value?: string
     /** Whether this group is forcibly rendered regardless of filtering. */
     forceMount?: boolean
+    /** Whether items in this group should update selection on hover. Defaults to true. */
+    selectOnHover?: boolean
   }
 type InputProps = Omit<React.ComponentPropsWithoutRef<typeof Primitive.input>, 'value' | 'onChange' | 'type'> & {
   /**
@@ -151,6 +153,7 @@ type Store = {
 type Group = {
   id: string
   forceMount?: boolean
+  selectOnHover?: boolean
 }
 
 const GROUP_SELECTOR = `[cmdk-group=""]`
@@ -671,6 +674,7 @@ const Item = React.forwardRef<HTMLDivElement, ItemProps>((props, forwardedRef) =
   const propsRef = useAsRef(props)
   const forceMount = propsRef.current?.forceMount ?? groupContext?.forceMount
   const [isVisuallyHighlighted, setIsVisuallyHighlighted] = React.useState(false)
+  const selectOnHover = groupContext?.selectOnHover
 
   useLayoutEffect(() => {
     if (!forceMount) {
@@ -726,8 +730,9 @@ const Item = React.forwardRef<HTMLDivElement, ItemProps>((props, forwardedRef) =
       aria-selected={Boolean(selected || isVisuallyHighlighted)}
       data-disabled={Boolean(disabled)}
       data-selected={Boolean(selected || isVisuallyHighlighted)}
-      onPointerEnter={handlePointerEnter}
-      onPointerLeave={handlePointerLeave}
+      onPointerEnter={selectOnHover ? undefined : handlePointerEnter}
+      onPointerLeave={selectOnHover ? undefined : handlePointerLeave}
+      onPointerMove={disabled || !selectOnHover || context.getDisablePointerSelection() ? undefined : select}
       onClick={disabled ? undefined : onSelect}
     >
       {props.children}
@@ -740,7 +745,7 @@ const Item = React.forwardRef<HTMLDivElement, ItemProps>((props, forwardedRef) =
  * Grouped items are always shown together.
  */
 const Group = React.forwardRef<HTMLDivElement, GroupProps>((props, forwardedRef) => {
-  const { heading, children, forceMount, ...etc } = props
+  const { heading, children, forceMount, selectOnHover = true, ...etc } = props
   const id = useId()
   const ref = React.useRef<HTMLDivElement>(null)
   const headingRef = React.useRef<HTMLDivElement>(null)
@@ -756,7 +761,7 @@ const Group = React.forwardRef<HTMLDivElement, GroupProps>((props, forwardedRef)
 
   useValue(id, ref, [props.value, props.heading, headingRef])
 
-  const contextValue = React.useMemo(() => ({ id, forceMount }), [forceMount])
+  const contextValue = React.useMemo(() => ({ id, forceMount, selectOnHover }), [forceMount, selectOnHover])
 
   return (
     <Primitive.div
